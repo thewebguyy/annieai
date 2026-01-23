@@ -1,36 +1,69 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ANNIE AI - Creative Intelligence Orchestrator
 
-## Getting Started
+**"One Workspace, Multiple Minds."**
 
-First, run the development server:
+Annie AI is a next-generation SaaS platform for scriptwriters that orchestrates multiple LLMs (Claude, GPT, Grok, Gemini) into a unified, industry-standard screenplay editor.
+
+## Features
+
+- **Brain Switching**: Automatically route tasks to the best model (Dialogue -> Claude, Logic -> GPT).
+- **Screenplay Editor**: WYSIWYG editor with standard formatting (Courier Prime) using Tiptap.
+- **Muse AI**: Integrated chat that holds context of your Story Bible.
+- **WGA Compliance**: Tracks AI usage for transparency reports.
+
+## Tech Stack
+
+- **Framework**: Next.js 16 (App Router)
+- **Styling**: Tailwind CSS 4.0
+- **Validations**: Zod
+- **Editor**: Tiptap (Headless)
+- **AI**: Vercel AI SDK + OpenAI/Anthropic/Google Providers (via OpenRouter)
+- **Database**: Supabase (Postgres)
+- **Vector DB**: Pinecone (for Story Bible RAG)
+
+## Setup & specific Environment Variables
+
+1. **Clone the repo**
+2. **Install dependencies**:
+   ```bash
+   npm install
+   ```
+3. **Environment Variables**:
+   Create a `.env.local` file:
+   ```env
+   # Database (Supabase)
+   NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_key
+
+   # AI Router (OpenRouter)
+   OPENROUTER_API_KEY=your_openrouter_key
+
+   # Vector DB (Pinecone)
+   PINECONE_API_KEY=your_pinecone_key
+   ```
+
+## Running Locally
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Deployment
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The project is optimized for **Vercel**.
 
-## Learn More
+1. Push to GitHub.
+2. Import project in Vercel.
+3. Add the Environment Variables in Vercel Project Settings.
+4. Deploy.
 
-To learn more about Next.js, take a look at the following resources:
+## V1 Testing Plan
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- **Metric**: Context Accuracy > 95%.
+- **Test**: Load a 100-page script into the Story Bible (Pinecone) and ask Muse about details on Page 5.
+- **Latency**: Ensure "Brain Switching" happens in < 200ms.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+© 2026 Annie AI Inc.

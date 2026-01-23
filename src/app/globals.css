@@ -1,26 +1,131 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@theme {
+  --font-courier: "Courier Prime", "Courier New", Courier, monospace;
 
-@theme inline {
+  /* Custom colors if needed, but we use CSS vars mostly */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* 
+  Tailwind 4 uses CSS variables for theme values natively.
+  We defined them in :root below.
+*/
+
+:root {
+  --background: #0a0a0a;
+  /* Dark by default as per request */
+  --foreground: #fafafa;
+
+  --card: #0f0f0f;
+  --card-foreground: #fafafa;
+
+  --popover: #0a0a0a;
+  --popover-foreground: #fafafa;
+
+  --primary: #7c3aed;
+  /* Violet 600 */
+  --primary-foreground: #fafafa;
+
+  --secondary: #27272a;
+  --secondary-foreground: #fafafa;
+
+  --muted: #27272a;
+  --muted-foreground: #a1a1aa;
+
+  --accent: #7c3aed;
+  --accent-foreground: #fafafa;
+
+  --destructive: #7f1d1d;
+  --destructive-foreground: #fafafa;
+
+  --border: #27272a;
+  --input: #27272a;
+  --ring: #d4d4d8;
+
+  --radius: 0.5rem;
 }
 
 body {
-  background: var(--background);
+  background-color: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-courier);
+}
+
+/* Screenplay Editor Styles */
+.ProseMirror {
+  outline: none;
+  min-height: 500px;
+  padding: 2rem;
+  color: black;
+  background-color: white;
+  box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1);
+  max-width: 850px;
+  margin-left: auto;
+  margin-right: auto;
+  font-family: 'Courier Prime', 'Courier New', Courier, monospace;
+  font-size: 12pt;
+  line-height: 1.0;
+}
+
+.ProseMirror p {
+  margin-bottom: 0;
+}
+
+/* Scene Heading */
+.scene-heading {
+  font-weight: bold;
+  text-transform: uppercase;
+  margin-top: 24pt;
+  margin-bottom: 12pt;
+}
+
+/* Action */
+.action {
+  margin-bottom: 12pt;
+}
+
+/* Character */
+h3.character,
+p.character {
+  text-transform: uppercase;
+  margin-top: 12pt;
+  margin-left: 37%;
+  margin-right: 20%;
+  width: 40%;
+}
+
+/* Dialogue */
+.dialogue {
+  margin-left: 20%;
+  margin-right: 20%;
+  margin-bottom: 0;
+}
+
+/* Parenthetical */
+.parenthetical {
+  margin-left: 30%;
+  margin-right: 30%;
+}
+
+/* Utilities */
+.glass {
+  background-color: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Utility to hide scrollbar but allow scroll */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #333;
+  border-radius: 3px;
 }
