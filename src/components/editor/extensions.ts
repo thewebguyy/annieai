@@ -1,5 +1,4 @@
-import { Node, mergeAttributes, Editor } from '@tiptap/core';
-import Paragraph from '@tiptap/extension-paragraph';
+import { Node, mergeAttributes } from '@tiptap/core';
 
 export const ScreenplayExtensions = [
     Node.create({
@@ -8,7 +7,7 @@ export const ScreenplayExtensions = [
         content: 'text*',
 
         parseHTML() {
-            return [{ tag: 'h3' }];
+            return [{ tag: 'h3', getAttrs: node => (node as HTMLElement).classList.contains('scene-heading') && null }];
         },
 
         renderHTML({ HTMLAttributes }) {
@@ -19,11 +18,14 @@ export const ScreenplayExtensions = [
             return {
                 'Mod-1': () => this.editor.commands.setNode('sceneHeading'),
                 'Enter': () => {
-                    // After scene heading, default to action
                     return this.editor.commands.insertContent({ type: 'action', content: [] });
-                }
+                },
             };
         },
+        // Auto-capitalize Scene Headings
+        onUpdate() {
+            // Implementation for auto-caps could be added here or via a dedicated extension
+        }
     }),
 
     Node.create({
@@ -36,7 +38,7 @@ export const ScreenplayExtensions = [
         },
 
         renderHTML({ HTMLAttributes }) {
-            return ['p', mergeAttributes(HTMLAttributes, { class: 'action' }), 0];
+            return ['p', mergeAttributes(HTMLAttributes, { class: 'action font-courier' }), 0];
         },
         addKeyboardShortcuts() {
             return {
@@ -55,17 +57,18 @@ export const ScreenplayExtensions = [
         },
 
         renderHTML({ HTMLAttributes }) {
-            return ['p', mergeAttributes(HTMLAttributes, { class: 'character' }), 0];
+            return ['p', mergeAttributes(HTMLAttributes, { class: 'character uppercase' }), 0];
         },
 
         addKeyboardShortcuts() {
             return {
                 'Mod-3': () => this.editor.commands.setNode('character'),
                 'Enter': () => {
-                    // After character, default to dialogue
                     return this.editor.commands.insertContent({ type: 'dialogue', content: [] });
                 },
-                'Tab': () => this.editor.commands.setNode('dialogue'),
+                'Tab': ({ editor }) => {
+                    return editor.commands.setNode('character');
+                }
             };
         },
     }),
@@ -86,8 +89,13 @@ export const ScreenplayExtensions = [
         addKeyboardShortcuts() {
             return {
                 'Mod-4': () => this.editor.commands.setNode('dialogue'),
-                'Enter': () => {
-                    return this.editor.commands.insertContent({ type: 'action', content: [] });
+                'Enter': ({ editor }) => {
+                    // If Enter is pressed, usually goes back to Character if rapid fire, or Action.
+                    // We'll default to Character for faster dialogue writing.
+                    return editor.commands.insertContent({ type: 'character', content: [] });
+                },
+                'Tab': ({ editor }) => {
+                    return editor.commands.setNode('parenthetical');
                 }
             };
         },
@@ -108,6 +116,9 @@ export const ScreenplayExtensions = [
         addKeyboardShortcuts() {
             return {
                 'Mod-5': () => this.editor.commands.setNode('parenthetical'),
+                'Enter': ({ editor }) => {
+                    return editor.commands.insertContent({ type: 'dialogue', content: [] });
+                }
             }
         }
     }),

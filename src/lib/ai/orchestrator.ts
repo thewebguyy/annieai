@@ -1,4 +1,6 @@
 import { createOpenAI } from '@ai-sdk/openai';
+import { generateObject, streamText } from 'ai';
+import { z } from 'zod';
 
 export const openrouter = createOpenAI({
     baseURL: 'https://openrouter.ai/api/v1',
@@ -11,27 +13,36 @@ export const MODELS: Record<ModelAlias, string> = {
     claude: 'anthropic/claude-4.5',   // Emotional/Dialogue
     gpt: 'openai/gpt-5',              // Logic/Structure
     grok: 'x-ai/grok-4',              // Uncensored/Wit
-    gemini: 'google/gemini-3.0',      // World-building/Long-context
+    gemini: 'google/gemini-pro-1.5',  // World-building/Long-context (Pro for better reasoning)
 };
 
-export const TASK_ROUIING: Record<string, ModelAlias> = {
-    'dialogue': 'claude',
-    'emotion': 'claude',
-    'structure': 'gpt',
-    'plot': 'gpt',
-    'logic': 'gpt',
-    'wit': 'grok',
-    'research': 'grok',
-    'world': 'gemini',
-    'lore': 'gemini',
-    'long-context': 'gemini',
-};
+const routingSchema = z.object({
+    model: z.enum(['claude', 'gpt', 'grok', 'gemini']),
+    reasoning: z.string(),
+    taskType: z.string(),
+});
 
-export function getModelForTask(taskDescription: string): ModelAlias {
-    const lower = taskDescription.toLowerCase();
-    if (lower.includes('dialogue') || lower.includes('eeling') || lower.includes('character')) return 'claude';
-    if (lower.includes('plot') || lower.includes('outline') || lower.includes('logic')) return 'gpt';
-    if (lower.includes('joke') || lower.includes('wit') || lower.includes('news')) return 'grok';
-    if (lower.includes('world') || lower.includes('history') || lower.includes('bible')) return 'gemini';
-    return 'gpt'; // Default
+/**
+ * Intelligent Router: Uses a high-speed model to decide which expert to call.
+ */
+export async function routeTask(task: string): Promise<{ model: ModelAlias; reasoning: string }> {
+    try {
+        const { object } = await generateObject({
+            model: openrouter('openai/gpt-4o-mini'), // Fast router model
+            schema: routingSchema,
+            prompt: `Analyze the following scriptwriting task and route it to the best AI expert.
+      Experts:
+      - CLAUDE: Best for emotional depth, nuanced dialogue, and character subtext.
+      - GPT: Best for logical structure, plot consistency, and technical screenplay formatting.
+      - GROK: Best for edgy wit, dark humor, and real-time cultural relevance.
+      - GEMINI: Best for massive lore, world-building, and cross-referencing large volumes of story bible data.
+
+      Task: "${task}"`,
+        });
+
+        return { model: object.model as ModelAlias, reasoning: object.reasoning };
+    } catch (error) {
+        console.error("Routing error, falling back to GPT:", error);
+        return { model: 'gpt', reasoning: 'Fallback due to error' };
+    }
 }

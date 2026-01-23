@@ -1,38 +1,42 @@
-import { streamText, CoreMessage } from 'ai';
-import { openrouter, getModelForTask, MODELS } from '@/lib/ai/orchestrator';
+import { streamText } from 'ai';
+import { openrouter, routeTask, MODELS } from '@/lib/ai/orchestrator';
+import { queryStoryBible } from '@/lib/ai/rag';
 
 export const runtime = 'edge';
 
 export async function POST(req: Request) {
-  const { messages }: { messages: CoreMessage[] } = await req.json();
+  const { messages, projectId = 'default' }: { messages: any[], projectId?: string } = await req.json();
   const lastMessage = messages[messages.length - 1];
+  const userQuery = (lastMessage?.content as string) || '';
 
-
-  // Orchestration Logic
-  // In a real app, we might use a dedicated 'router' model first to decide steps.
-  // For V1 MVP, we use keyword analysis from the orchestrator lib.
-  const task = typeof lastMessage.content === 'string' ? lastMessage.content : '';
-  const modelAlias = getModelForTask(task);
+  // 1. Intelligent Routing
+  const { model: modelAlias, reasoning } = await routeTask(userQuery);
   const modelId = MODELS[modelAlias];
 
-  console.log(`[Orchestrator] Routing task "${task.substring(0, 20)}..." to ${modelAlias} (${modelId})`);
+  // 2. RAG Context Retrieval
+  let context = "";
+  try {
+    const relevantSnippets = await queryStoryBible(projectId, userQuery);
+    if (relevantSnippets.length > 0) {
+      context = "\nRELEVANT STORY BIBLE CONTEXT:\n" +
+        relevantSnippets.map(s => `- ${s.text}`).join('\n');
+    }
+  } catch (e) {
+    console.error("RAG retrieval failed:", e);
+  }
 
-  // System Prompt Construction
+  // 3. System Prompt Construction
   const systemPrompt = `
-    You are ANNIE, a Creative Intelligence Orchestrator. 
-    You are currently routing this request to the ${modelAlias.toUpperCase()} model, which is optimized for this specific task.
-    
-    Context:
-    - User is writing a screenplay.
-    - Format: Industry standard screenplay format.
-    - Style: Professional, Creative, Concise.
-    
-    If asked to write a scene, output Markdown that visually resembles a screenplay:
-    **INT. LOCATION - DAY**
-    ACTION lines here.
-    
-    CHARACTER
-    Dialogue here.
+    You are ANNIE, a Creative Intelligence Orchestrator for scriptwriters.
+    Task Routing: You are acting as the ${modelAlias.toUpperCase()} expert.
+    Reasoning for choice: ${reasoning}
+
+    Guidelines:
+    - Maintain industry-standard screenplay formatting.
+    - Use the provided context from the Story Bible to ensure continuity.
+    - If the user asks for a scene, use Markdown for script elements.
+
+    ${context}
   `;
 
   const result = await streamText({
@@ -42,5 +46,10 @@ export async function POST(req: Request) {
     temperature: 0.7,
   });
 
-  return result.toDataStreamResponse();
+  return result.toTextStreamResponse({
+    headers: {
+      'x-annie-model': modelAlias,
+      'x-annie-reasoning': encodeURIComponent(reasoning),
+    }
+  });
 }

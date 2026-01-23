@@ -1,11 +1,11 @@
 'use client';
 
-import { useEditor, EditorContent, BubbleMenu, FloatingMenu } from '@tiptap/react';
+import { useEditor, EditorContent, BubbleMenu } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { ScreenplayExtensions } from './extensions';
 import { cn } from '@/lib/utils';
-import { useEffect, useState } from 'react';
-import { Bold, Italic, Loader2, Wand2 } from 'lucide-react';
+import { Bold, Italic, Loader2, Wand2, FileDown } from 'lucide-react';
+import jsPDF from 'jspdf';
 
 interface ScriptEditorProps {
     initialContent?: string;
@@ -17,22 +17,47 @@ const ScriptEditor = ({ initialContent = '', onUpdate, isGhostWriting = false }:
     const editor = useEditor({
         extensions: [
             StarterKit.configure({
-                heading: false, // We use custom sceneHeading
-                paragraph: false, // We use action as default block? Or keep paragraph but styled? 
-                // Actually, Tiptap needs a default block. Let's use StarterKit and just prepend ours.
+                heading: false,
+                paragraph: {
+                    HTMLAttributes: {
+                        class: 'action',
+                    }
+                },
             }),
             ...ScreenplayExtensions
         ],
         content: initialContent,
         editorProps: {
             attributes: {
-                class: 'prose prose-invert focus:outline-none max-w-none min-h-[calc(100vh-200px)]',
+                class: 'prose prose-invert focus:outline-none max-w-none min-h-[calc(100vh-200px)] courier-prime',
             },
+            handleKeyDown: (view, event) => {
+                // Auto-capitalize logic for character names could go here
+                return false;
+            }
         },
         onUpdate: ({ editor }) => {
             onUpdate?.(editor.getHTML());
         },
     });
+
+    const exportToPDF = () => {
+        if (!editor) return;
+        const doc = new jsPDF({
+            unit: 'pt',
+            format: 'letter',
+        });
+
+        const content = editor.getText();
+
+        // Simple text export for now - in production use a proper HTML to PDF converter with CSS
+        doc.setFont("courier", "normal");
+        doc.setFontSize(12);
+
+        const splitText = doc.splitTextToSize(content, 500);
+        doc.text(splitText, 50, 50);
+        doc.save("script-annie-ai.pdf");
+    };
 
     if (!editor) {
         return null;
@@ -40,49 +65,59 @@ const ScriptEditor = ({ initialContent = '', onUpdate, isGhostWriting = false }:
 
     return (
         <div className="relative group w-full max-w-4xl mx-auto my-8">
-            {/* Floating Toolbar for fast access */}
+            {/* Editor Controls */}
+            <div className="absolute -top-12 right-0 flex gap-2">
+                <button
+                    onClick={exportToPDF}
+                    className="flex items-center gap-2 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-md text-xs text-gray-300 transition-colors"
+                >
+                    <FileDown size={14} /> Export to PDF
+                </button>
+            </div>
+
+            {/* Floating Toolbar */}
             {editor && (
-                <BubbleMenu editor={editor} tippyOptions={{ duration: 100 }} className="flex gap-1 p-1 bg-black/80 backdrop-blur border border-white/10 rounded-lg text-white shadow-xl">
+                <BubbleMenu editor={editor} tippyOptions={{ duration: 100 }} className="flex gap-1 p-1 bg-black/90 backdrop-blur-xl border border-white/10 rounded-lg text-white shadow-2xl">
                     <button
                         onClick={() => editor.chain().focus().toggleBold().run()}
-                        className={cn("p-2 hover:bg-white/10 rounded", editor.isActive('bold') && 'text-purple-400')}
+                        className={cn("p-2 hover:bg-white/10 rounded transition-colors", editor.isActive('bold') && 'text-purple-400')}
                     >
                         <Bold size={16} />
                     </button>
                     <button
                         onClick={() => editor.chain().focus().toggleItalic().run()}
-                        className={cn("p-2 hover:bg-white/10 rounded", editor.isActive('italic') && 'text-purple-400')}
+                        className={cn("p-2 hover:bg-white/10 rounded transition-colors", editor.isActive('italic') && 'text-purple-400')}
                     >
                         <Italic size={16} />
                     </button>
+                    <div className="w-px h-4 bg-white/10 self-center mx-1" />
                     <button
-                        onClick={() => {
-                            // Stub for AI rewrite
-                            alert("Trigger AI Rewrite (Context Menu)");
-                        }}
-                        className="p-2 hover:bg-white/10 rounded text-purple-400"
+                        onClick={() => alert("AI Contextual Revision Launching...")}
+                        className="p-2 hover:bg-purple-900/40 rounded text-purple-400 flex items-center gap-2 pr-3"
                     >
                         <Wand2 size={16} />
+                        <span className="text-[10px] font-bold uppercase tracking-widest">Rewrite</span>
                     </button>
                 </BubbleMenu>
             )}
 
             {/* Main Editor Surface */}
-            <div className="bg-[#1a1a1a] border border-white/5 shadow-2xl min-h-[800px] p-8 md:p-16 rounded-sm relative overflow-hidden">
-                {/* Paper texture overlay could go here */}
+            <div className="bg-white text-black shadow-[0_0_50px_rgba(0,0,0,0.5)] min-h-[1056px] w-[816px] mx-auto p-[1in] font-courier relative">
+                {/* Page counter or watermarks could go here */}
+                <div className="absolute top-8 right-8 text-xs text-gray-400 opacity-50 font-courier">1.</div>
 
                 {isGhostWriting && (
-                    <div className="absolute top-4 right-4 flex items-center gap-2 text-purple-400 text-sm animate-pulse">
-                        <Loader2 className="animate-spin" size={14} />
-                        <span>AI Ghost Writer Active...</span>
+                    <div className="absolute top-4 left-[1in] flex items-center gap-2 text-purple-600 text-[10px] font-bold tracking-widest uppercase">
+                        <Loader2 className="animate-spin" size={12} />
+                        <span>Annie is thinking...</span>
                     </div>
                 )}
 
                 <EditorContent editor={editor} />
             </div>
 
-            <div className="text-center text-xs text-muted-foreground mt-4">
-                Screenplay Format Standard (Courier Prime 12pt)
+            <div className="text-center text-[10px] text-muted-foreground mt-8 uppercase tracking-[0.2em] opacity-30">
+                Standard Screenplay Format • 12pt Courier Prime
             </div>
         </div>
     );
