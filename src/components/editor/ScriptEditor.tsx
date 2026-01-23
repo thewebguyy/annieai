@@ -1,7 +1,10 @@
 'use client';
 
-import { useEditor, EditorContent, BubbleMenu } from '@tiptap/react';
+import { useEditor, EditorContent } from '@tiptap/react';
+import { BubbleMenu, FloatingMenu } from '@tiptap/react/menus';
 import StarterKit from '@tiptap/starter-kit';
+import BubbleMenuExtension from '@tiptap/extension-bubble-menu';
+import FloatingMenuExtension from '@tiptap/extension-floating-menu';
 import { ScreenplayExtensions } from './extensions';
 import { cn } from '@/lib/utils';
 import { Bold, Italic, Loader2, Wand2, FileDown } from 'lucide-react';
@@ -24,17 +27,15 @@ const ScriptEditor = ({ initialContent = '', onUpdate, isGhostWriting = false }:
                     }
                 },
             }),
-            ...ScreenplayExtensions
+            BubbleMenuExtension,
+            FloatingMenuExtension,
+            ...ScreenplayExtensions,
         ],
         content: initialContent,
         editorProps: {
             attributes: {
                 class: 'prose prose-invert focus:outline-none max-w-none min-h-[calc(100vh-200px)] courier-prime',
             },
-            handleKeyDown: (view, event) => {
-                // Auto-capitalize logic for character names could go here
-                return false;
-            }
         },
         onUpdate: ({ editor }) => {
             onUpdate?.(editor.getHTML());
@@ -49,11 +50,8 @@ const ScriptEditor = ({ initialContent = '', onUpdate, isGhostWriting = false }:
         });
 
         const content = editor.getText();
-
-        // Simple text export for now - in production use a proper HTML to PDF converter with CSS
         doc.setFont("courier", "normal");
         doc.setFontSize(12);
-
         const splitText = doc.splitTextToSize(content, 500);
         doc.text(splitText, 50, 50);
         doc.save("script-annie-ai.pdf");
@@ -77,33 +75,34 @@ const ScriptEditor = ({ initialContent = '', onUpdate, isGhostWriting = false }:
 
             {/* Floating Toolbar */}
             {editor && (
-                <BubbleMenu editor={editor} tippyOptions={{ duration: 100 }} className="flex gap-1 p-1 bg-black/90 backdrop-blur-xl border border-white/10 rounded-lg text-white shadow-2xl">
-                    <button
-                        onClick={() => editor.chain().focus().toggleBold().run()}
-                        className={cn("p-2 hover:bg-white/10 rounded transition-colors", editor.isActive('bold') && 'text-purple-400')}
-                    >
-                        <Bold size={16} />
-                    </button>
-                    <button
-                        onClick={() => editor.chain().focus().toggleItalic().run()}
-                        className={cn("p-2 hover:bg-white/10 rounded transition-colors", editor.isActive('italic') && 'text-purple-400')}
-                    >
-                        <Italic size={16} />
-                    </button>
-                    <div className="w-px h-4 bg-white/10 self-center mx-1" />
-                    <button
-                        onClick={() => alert("AI Contextual Revision Launching...")}
-                        className="p-2 hover:bg-purple-900/40 rounded text-purple-400 flex items-center gap-2 pr-3"
-                    >
-                        <Wand2 size={16} />
-                        <span className="text-[10px] font-bold uppercase tracking-widest">Rewrite</span>
-                    </button>
+                <BubbleMenu editor={editor} tippyOptions={{ duration: 100 }}>
+                    <div className="flex gap-1 p-1 bg-black/90 backdrop-blur-xl border border-white/10 rounded-lg text-white shadow-2xl">
+                        <button
+                            onClick={() => editor.chain().focus().toggleBold().run()}
+                            className={cn("p-2 hover:bg-white/10 rounded transition-colors", editor.isActive('bold') && 'text-purple-400')}
+                        >
+                            <Bold size={16} />
+                        </button>
+                        <button
+                            onClick={() => editor.chain().focus().toggleItalic().run()}
+                            className={cn("p-2 hover:bg-white/10 rounded transition-colors", editor.isActive('italic') && 'text-purple-400')}
+                        >
+                            <Italic size={16} />
+                        </button>
+                        <div className="w-px h-4 bg-white/10 self-center mx-1" />
+                        <button
+                            onClick={() => alert("AI Contextual Revision Launching...")}
+                            className="p-2 hover:bg-purple-900/40 rounded text-purple-400 flex items-center gap-2 pr-3"
+                        >
+                            <Wand2 size={16} />
+                            <span className="text-[10px] font-bold uppercase tracking-widest">Rewrite</span>
+                        </button>
+                    </div>
                 </BubbleMenu>
             )}
 
             {/* Main Editor Surface */}
             <div className="bg-white text-black shadow-[0_0_50px_rgba(0,0,0,0.5)] min-h-[1056px] w-[816px] mx-auto p-[1in] font-courier relative">
-                {/* Page counter or watermarks could go here */}
                 <div className="absolute top-8 right-8 text-xs text-gray-400 opacity-50 font-courier">1.</div>
 
                 {isGhostWriting && (
