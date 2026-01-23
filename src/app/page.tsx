@@ -9,6 +9,8 @@ import { supabase } from "@/lib/db/supabase";
 import { useRouter } from "next/navigation";
 import { ingestStoryBible } from "@/lib/ai/rag";
 
+export const dynamic = 'force-dynamic';
+
 export default function Home() {
   const [isWizardOpen, setIsWizardOpen] = useState(false);
   const [project, setProject] = useState({

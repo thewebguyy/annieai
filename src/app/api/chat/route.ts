@@ -2,7 +2,8 @@ import { streamText } from 'ai';
 import { openrouter, routeTask, MODELS } from '@/lib/ai/orchestrator';
 import { queryStoryBible } from '@/lib/ai/rag';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {
   const { messages, projectId = 'default' }: { messages: any[], projectId?: string } = await req.json();
