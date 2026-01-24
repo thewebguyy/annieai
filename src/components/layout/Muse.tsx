@@ -1,6 +1,6 @@
 'use client';
 
-import { useChat } from '@ai-sdk/react';
+import { useChat } from 'ai/react';
 import { cn } from "@/lib/utils";
 import { Bot, Mic, Send, Sparkles, BrainCircuit, History } from "lucide-react";
 import { useState } from 'react';

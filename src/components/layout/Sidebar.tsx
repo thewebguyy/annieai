@@ -1,3 +1,5 @@
+'use client';
+
 import { cn } from "@/lib/utils";
 import { Book, FileText, FolderOpen, Plus, Settings, Users, LogOut } from "lucide-react";
 import { supabase } from "@/lib/db/supabase";
