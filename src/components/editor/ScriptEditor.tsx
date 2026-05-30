@@ -14,6 +14,86 @@ import { useEditorStore, type ScreenplayNodeType } from "@/stores/editorStore";
 import { EditorSerializer } from "./EditorSerializer";
 import { toast } from "@/lib/ui/toast";
 import { VersionHistoryDrawer, type SceneVersion } from "../ui/VersionHistoryDrawer";
+import { supabase } from "@/lib/db/supabaseClient";
+import type { User } from "@supabase/supabase-js";
+import { Extension } from "@tiptap/core";
+import { Plugin, PluginKey } from "@tiptap/pm/state";
+import { Decoration, DecorationSet } from "@tiptap/pm/view";
+
+const COLORS = [
+  "#ef4444", "#f97316", "#f59e0b", "#10b981", 
+  "#06b6d4", "#3b82f6", "#6366f1", "#8b5cf6", "#d946ef"
+];
+
+function getUserColor(userId: string): string {
+  let hash = 0;
+  for (let i = 0; i < userId.length; i++) {
+    hash = userId.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const index = Math.abs(hash) % COLORS.length;
+  return COLORS[index];
+}
+
+interface CollaborationCursorOptions {
+  cursors: Array<{
+    userId: string;
+    userName: string;
+    color: string;
+    pos: number;
+  }>;
+}
+
+const CollaborationCursor = Extension.create<CollaborationCursorOptions>({
+  name: "collaborationCursor",
+
+  addOptions() {
+    return {
+      cursors: [],
+    };
+  },
+
+  addProseMirrorPlugins() {
+    return [
+      new Plugin({
+        key: new PluginKey("collaborationCursor"),
+        state: {
+          init: () => DecorationSet.empty,
+          apply: (tr, set) => set.map(tr.mapping, tr.doc),
+        },
+        props: {
+          decorations: (state) => {
+            const decos: Decoration[] = [];
+            const docSize = state.doc.content.size;
+            const cursors = this.options.cursors || [];
+
+            cursors.forEach((cur: { userId: string; userName: string; color: string; pos: number }) => {
+              const pos = Math.max(0, Math.min(docSize, cur.pos));
+              
+              const wrapper = document.createElement("span");
+              wrapper.className = "collaboration-cursor-wrapper";
+
+              const cursorBar = document.createElement("span");
+              cursorBar.className = "cursor-bar";
+              cursorBar.style.backgroundColor = cur.color;
+
+              const label = document.createElement("span");
+              label.className = "cursor-label";
+              label.style.backgroundColor = cur.color;
+              label.innerText = cur.userName;
+
+              wrapper.appendChild(cursorBar);
+              wrapper.appendChild(label);
+
+              decos.push(Decoration.widget(pos, wrapper, { side: 1 }));
+            });
+
+            return DecorationSet.create(state.doc, decos);
+          },
+        },
+      }),
+    ];
+  },
+});
 
 interface ScriptEditorProps {
   isGhostWriting?: boolean;
@@ -25,6 +105,13 @@ export default function ScriptEditor({ isGhostWriting = false }: ScriptEditorPro
   const { isDirty, setStats, setActiveNodeType, setIsDirty } = useEditorStore();
   
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [otherCursors, setOtherCursors] = useState<Array<{
+    userId: string;
+    userName: string;
+    color: string;
+    pos: number;
+  }>>([]);
 
   const editor = useEditor({
     extensions: [
@@ -33,6 +120,7 @@ export default function ScriptEditor({ isGhostWriting = false }: ScriptEditorPro
         paragraph: false,
       }),
       ...ScreenplayExtensions,
+      CollaborationCursor,
     ],
     editorProps: {
       attributes: {
@@ -79,6 +167,117 @@ export default function ScriptEditor({ isGhostWriting = false }: ScriptEditorPro
       setActiveNodeType(activeNodeType);
     },
   });
+
+  // Fetch current user details
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) {
+        setCurrentUser(user);
+      }
+    });
+  }, []);
+
+  // Update editor collaboration cursor options when otherCursors array changes
+  useEffect(() => {
+    if (editor && !editor.isDestroyed) {
+      const ext = (editor as unknown as {
+        extensionManager: {
+          extensions: Array<{
+            name: string;
+            options: CollaborationCursorOptions;
+          }>;
+        };
+      }).extensionManager.extensions.find((e) => e.name === "collaborationCursor");
+      if (ext) {
+        ext.options.cursors = otherCursors;
+      }
+      // Force a redraw of the editor decorations list
+      editor.view.dispatch(editor.state.tr);
+    }
+  }, [otherCursors, editor]);
+
+  // Sync active presence with Supabase Realtime Collaboration Channels
+  useEffect(() => {
+    if (!activeProject || !currentUser || !editor) return;
+
+    const projectId = activeProject.id;
+    const userId = currentUser.id;
+    const userName = currentUser.user_metadata?.name || currentUser.email || "Co-writer";
+    const color = getUserColor(userId);
+
+    const channel = supabase.channel(`project-collaboration:${projectId}`, {
+      config: {
+        presence: {
+          key: userId,
+        },
+      },
+    });
+
+    const handleSync = () => {
+      const state = channel.presenceState();
+      const cursorsList: Array<{
+        userId: string;
+        userName: string;
+        color: string;
+        pos: number;
+      }> = [];
+
+      Object.keys(state).forEach((key) => {
+        if (key === userId) return;
+
+        const presences = state[key] as unknown as Array<{
+          userId: string;
+          userName: string;
+          color: string;
+          pos: number;
+        }>;
+        if (presences && presences.length > 0) {
+          const latestObj = presences[presences.length - 1];
+          if (latestObj && typeof latestObj.pos === "number") {
+            cursorsList.push({
+              userId: latestObj.userId || key,
+              userName: latestObj.userName || "Co-writer",
+              color: latestObj.color || "#7c3aed",
+              pos: latestObj.pos,
+            });
+          }
+        }
+      });
+
+      setOtherCursors(cursorsList);
+    };
+
+    channel
+      .on("presence", { event: "sync" }, handleSync)
+      .subscribe(async (status) => {
+        if (status === "SUBSCRIBED") {
+          const initialPos = editor.state.selection.$anchor.pos;
+          await channel.track({
+            userId,
+            userName,
+            color,
+            pos: initialPos,
+          });
+        }
+      });
+
+    const onSelectionUpdate = () => {
+      const pos = editor.state.selection.$anchor.pos;
+      channel.track({
+        userId,
+        userName,
+        color,
+        pos,
+      });
+    };
+
+    editor.on("selectionUpdate", onSelectionUpdate);
+
+    return () => {
+      editor.off("selectionUpdate", onSelectionUpdate);
+      channel.unsubscribe();
+    };
+  }, [activeProject, currentUser, editor]);
 
   // Load project scenes
   useEffect(() => {

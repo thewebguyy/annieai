@@ -102,4 +102,64 @@ export const EditorSerializer = {
       content,
     };
   },
+
+  /**
+   * Converts a list of SceneRow objects to a Fountain screenplay string.
+   */
+  toFountain(rows: SceneRow[]): string {
+    const sorted = [...rows].sort((a, b) => a.order_index - b.order_index);
+    const lines: string[] = [];
+
+    for (let i = 0; i < sorted.length; i++) {
+      const row = sorted[i];
+      let content = (row.content || "").trim();
+
+      switch (row.type) {
+        case "scene_heading": {
+          const upper = content.toUpperCase();
+          if (lines.length > 0) {
+            lines.push("");
+          }
+          lines.push(upper);
+          break;
+        }
+        case "action": {
+          if (lines.length > 0) {
+            lines.push("");
+          }
+          lines.push(content);
+          break;
+        }
+        case "character": {
+          if (lines.length > 0) {
+            lines.push("");
+          }
+          lines.push(content.toUpperCase());
+          break;
+        }
+        case "parenthetical": {
+          if (!content.startsWith("(")) {
+            content = "(" + content;
+          }
+          if (!content.endsWith(")")) {
+            content = content + ")";
+          }
+          lines.push(content);
+          break;
+        }
+        case "dialogue": {
+          lines.push(content);
+          break;
+        }
+        default: {
+          if (lines.length > 0) {
+            lines.push("");
+          }
+          lines.push(content);
+        }
+      }
+    }
+
+    return lines.join("\n");
+  },
 };

@@ -35,7 +35,7 @@ describe("ComplianceService", () => {
       from: vi.fn().mockReturnValue({
         select: mockSelect,
       }),
-    } as unknown as ReturnType<typeof createSupabaseServer>);
+    } as unknown as Awaited<ReturnType<typeof createSupabaseServer>>);
 
     const report = await ComplianceService.generateReport("project-1", "test-request");
 
@@ -67,7 +67,7 @@ describe("ComplianceService", () => {
       from: vi.fn().mockReturnValue({
         select: mockSelect,
       }),
-    } as unknown as ReturnType<typeof createSupabaseServer>);
+    } as unknown as Awaited<ReturnType<typeof createSupabaseServer>>);
 
     const report = await ComplianceService.generateReport("project-1", "test-request");
 

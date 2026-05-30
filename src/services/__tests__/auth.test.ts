@@ -26,7 +26,7 @@ describe("requireAuth Helper", () => {
           error: null,
         }),
       },
-    } as unknown as ReturnType<typeof createSupabaseServer>);
+    } as unknown as Awaited<ReturnType<typeof createSupabaseServer>>);
 
     const auth = await requireAuth();
 
@@ -42,7 +42,7 @@ describe("requireAuth Helper", () => {
           error: null,
         }),
       },
-    } as unknown as ReturnType<typeof createSupabaseServer>);
+    } as unknown as Awaited<ReturnType<typeof createSupabaseServer>>);
 
     let errorResponse: Response | null = null;
     try {

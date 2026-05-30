@@ -22,7 +22,7 @@ describe("Orchestrator routeTask", () => {
         reasoning: "Deep character interaction and dialogue required.",
         taskType: "dialogue",
       },
-    } as unknown as ReturnType<typeof generateObject>);
+    } as unknown as Awaited<ReturnType<typeof generateObject>>);
 
     const res = await routeTask(
       "Write a dramatic dialogue between Elara and her shadow.",

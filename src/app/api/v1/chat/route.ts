@@ -5,6 +5,7 @@ import { z } from "zod";
 import { requireAuth } from "@/lib/auth";
 import { ProjectService, ForbiddenError } from "@/services/ProjectService";
 import { MuseService } from "@/services/MuseService";
+import { BillingService } from "@/services/BillingService";
 import { logger } from "@/lib/logger";
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
@@ -115,6 +116,20 @@ export async function POST(req: Request) {
         );
       }
       throw err;
+    }
+
+    // 3b. Credit Enforcement Check
+    const limitCheck = await BillingService.checkLimit(userId, requestId);
+    if (!limitCheck.isAllowed) {
+      return Response.json(
+        {
+          error: {
+            code: "RATE_LIMIT_EXCEEDED",
+            message: `Credit limit exceeded. You have used ${limitCheck.usage} of ${limitCheck.limit} character edits allowed on the ${limitCheck.tier} plan. Please upgrade to write more.`,
+          },
+        },
+        { status: 402 } // Payment Required
+      );
     }
 
     // 4. Sliding Window Rate Limiting

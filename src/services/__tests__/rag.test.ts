@@ -47,7 +47,7 @@ describe("RagService", () => {
 
     vi.mocked(embed).mockResolvedValue({
       embedding: [0.12, -0.05, 0.41],
-    } as unknown as ReturnType<typeof embed>);
+    } as unknown as Awaited<ReturnType<typeof embed>>);
 
     const snippets = await RagService.query("project-uuid-123", "Who is Elara?");
 

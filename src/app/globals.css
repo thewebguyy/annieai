@@ -129,3 +129,45 @@ p.character {
   background: #333;
   border-radius: 3px;
 }
+
+/* Collaboration Cursors */
+.collaboration-cursor-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  pointer-events: none;
+}
+
+.collaboration-cursor-wrapper .cursor-bar {
+  width: 2px;
+  height: 1.2em;
+  margin-left: -1px;
+  margin-right: -1px;
+  pointer-events: none;
+  animation: cursor-pulse 1.2s infinite;
+}
+
+@keyframes cursor-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.collaboration-cursor-wrapper .cursor-label {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  padding: 1px 4px;
+  border-radius: 2px;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 8px;
+  font-weight: 600;
+  color: white;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 50;
+  opacity: 0.85;
+}
+
+.collaboration-cursor-wrapper:hover .cursor-label {
+  opacity: 1;
+}

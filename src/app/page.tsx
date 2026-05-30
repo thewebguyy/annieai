@@ -66,6 +66,28 @@ export default function Home() {
     }
   };
 
+  const handleExportFountain = async () => {
+    if (!activeProject) return;
+    try {
+      const res = await fetch(`/api/v1/projects/${activeProject.id}/export`);
+      if (!res.ok) throw new Error("Export failed");
+      
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${activeProject.title.toLowerCase().replace(/[^a-z0-9]+/g, "-") || "screenplay"}.fountain`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success("Screenplay exported to Fountain format!");
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to export screenplay.");
+    }
+  };
+
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-background text-foreground selection:bg-purple-500/30 font-sans">
       {/* Left Sidebar */}
@@ -98,6 +120,15 @@ export default function Home() {
           </div>
           
           <div className="flex items-center gap-6">
+            {activeProject && (
+              <button
+                onClick={handleExportFountain}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-600/80 hover:bg-purple-700/90 text-white border border-purple-500/20 rounded-lg text-xs font-mono transition-colors shadow-[0_0_12px_rgba(147,51,234,0.1)]"
+              >
+                Export Fountain
+              </button>
+            )}
+
             {/* Interactive Autosave Indicators */}
             {activeProject && (
               <>
