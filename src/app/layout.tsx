@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import localFont from "next/font/local";
 import { Courier_Prime } from 'next/font/google';
+import { Toaster } from "sonner";
 import "./globals.css";
 
 const courierPrime = Courier_Prime({
@@ -26,6 +26,7 @@ export default function RootLayout({
         className={`${courierPrime.variable} antialiased bg-background text-foreground overflow-hidden`}
       >
         {children}
+        <Toaster theme="dark" closeButton richColors position="top-right" />
       </body>
     </html>
   );

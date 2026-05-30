@@ -3,11 +3,19 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, Terminal, BookOpen, UserCircle, Wand2, X } from 'lucide-react';
+import { cn } from '@/lib/utils';
+
+export interface ProjectWizardData {
+  title: string;
+  genre: string;
+  logline: string;
+  characters: string;
+}
 
 interface ProjectWizardProps {
     isOpen: boolean;
     onClose: () => void;
-    onComplete: (projectData: any) => void;
+    onComplete: (projectData: ProjectWizardData) => void;
 }
 
 export function ProjectWizard({ isOpen, onClose, onComplete }: ProjectWizardProps) {
@@ -184,6 +192,3 @@ export function ProjectWizard({ isOpen, onClose, onComplete }: ProjectWizardProp
     );
 }
 
-function cn(...classes: any[]) {
-    return classes.filter(Boolean).join(' ');
-}

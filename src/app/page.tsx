@@ -1,100 +1,145 @@
-'use client';
+// Architectural Layer: Component / Page
+// Dependencies: src/components/layout/Sidebar.tsx, src/components/layout/Muse.tsx, src/components/editor/ScriptEditor.tsx, src/components/ui/ProjectWizard.tsx, src/components/ui/CompliancePanel.tsx, src/stores/projectStore.ts, src/stores/editorStore.ts, src/lib/ui/toast.ts, src/lib/db/supabaseClient.ts, next/navigation
+
+"use client";
 
 import { useState, useEffect } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Muse } from "@/components/layout/Muse";
 import ScriptEditor from "@/components/editor/ScriptEditor";
-import { ProjectWizard } from "@/components/ui/ProjectWizard";
-import { supabase } from "@/lib/db/supabase";
+import { ProjectWizard, type ProjectWizardData } from "@/components/ui/ProjectWizard";
+import { CompliancePanel } from "@/components/ui/CompliancePanel";
+import { supabase } from "@/lib/db/supabaseClient";
 import { useRouter } from "next/navigation";
-import { ingestStoryBible } from "@/lib/ai/rag";
+import { useProjectStore, type Project } from "@/stores/projectStore";
+import { useEditorStore } from "@/stores/editorStore";
+import { toast } from "@/lib/ui/toast";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 export default function Home() {
   const [isWizardOpen, setIsWizardOpen] = useState(false);
-  const [project, setProject] = useState({
-    id: 'default',
-    title: 'Echoes',
-    content: `
-        <h3 class="scene-heading">INT. NEURAL LINK - DAY</h3>
-        <p class="action">The digital void hums with potential. A cursor blinks in the darkness, waiting for a command.</p>
-        <p class="character">SYSTEM (V.O.)</p>
-        <p class="dialogue">Welcome back, Writer. Our consciousness is synced.</p>
-    `,
-  });
-
   const router = useRouter();
 
-  // Basic check for session on client
+  // Zustand State Store Selectors
+  const { activeProject, lastSavedAt, addProject, setActiveProject } = useProjectStore();
+  const { wordCount, sceneCount, isDirty, activeView, setActiveView } = useEditorStore();
+
+  // Client Session check
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session) {
-        // Redundancy for middleware
-        router.push('/login');
+        router.push("/login");
       }
     });
   }, [router]);
 
-  const handleCreateProject = async (data: any) => {
-    // 1. Update local state
-    const newId = Math.random().toString(36).substring(7);
-    setProject({
-      id: newId,
-      title: data.title,
-      content: `<h3 class="scene-heading">FADE IN:</h3><h3 class="scene-heading">INT. ${data.title.toUpperCase()} - DAY</h3>`,
-    });
-
-    // 2. Ingest to RAG (Story Bible)
+  const handleCreateProject = async (data: ProjectWizardData) => {
     try {
-      await ingestStoryBible(newId, `Title: ${data.title}\nGenre: ${data.genre}\nLogline: ${data.logline}\nCharacters: ${data.characters}`);
-      console.log("RAG Ingestion Successful");
-    } catch (e) {
-      console.error("RAG Ingestion Failed (Check API Keys):", e);
+      const res = await fetch("/api/v1/projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: data.title,
+          genre: data.genre,
+          logline: data.logline,
+          characters: data.characters,
+        }),
+      });
+
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson?.error?.message || "Failed to initialize screenplay.");
+      }
+
+      const json = await res.json();
+      if (json.data) {
+        const newProj = json.data as Project;
+        addProject(newProj);
+        setActiveProject(newProj);
+        setActiveView("editor");
+        toast.success(`Screenplay "${newProj.title}" successfully initialized!`);
+      }
+    } catch (e: unknown) {
+      console.error(e);
+      toast.error(e instanceof Error ? e.message : "Initialization failed.");
     }
   };
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-background text-foreground selection:bg-purple-500/30">
+    <div className="flex h-screen w-screen overflow-hidden bg-background text-foreground selection:bg-purple-500/30 font-sans">
       {/* Left Sidebar */}
       <Sidebar onNewProject={() => setIsWizardOpen(true)} />
 
       {/* Center Canvas */}
       <main className="flex-1 flex flex-col h-full relative bg-[#0a0a0a] overflow-hidden">
-        {/* Subtle ambient gradient */}
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(124,58,237,0.05),transparent)] pointer-events-none" />
+        {/* Ambient radial gradient */}
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(124,58,237,0.04),transparent)] pointer-events-none" />
 
-        <header className="h-14 border-b border-white/5 flex items-center justify-between px-6 bg-[#0a0a0a]/80 backdrop-blur-md z-20 shrink-0">
-          <div className="flex items-center text-sm">
+        {/* Global Header */}
+        <header className="h-14 border-b border-white/5 flex items-center justify-between px-6 bg-[#0a0a0a]/80 backdrop-blur-md z-20 shrink-0 select-none">
+          <div className="flex items-center text-sm gap-4">
             <div className="flex items-center gap-2 group cursor-pointer">
               <span className="text-gray-500 group-hover:text-gray-300 transition-colors">Workspace</span>
               <span className="text-gray-700">/</span>
-              <span className="text-white font-bold tracking-tight">{project.title}</span>
+              <span className="text-white font-bold tracking-tight">
+                {activeProject?.title || "Select Screenplay"}
+              </span>
             </div>
+            
+            {/* Realtime stats badge */}
+            {activeProject && activeView === "editor" && (
+              <div className="flex items-center gap-3 text-[10px] font-mono text-gray-500 border-l border-white/10 pl-4 mt-0.5">
+                <span>Words: <strong className="text-gray-300">{wordCount}</strong></span>
+                <span className="opacity-30">|</span>
+                <span>Scenes: <strong className="text-gray-300">{sceneCount}</strong></span>
+              </div>
+            )}
           </div>
+          
           <div className="flex items-center gap-6">
-            <div className="flex items-center gap-2 text-[10px] font-bold tracking-widest uppercase">
-              <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)] animate-pulse"></div>
-              <span className="text-gray-400">Sync Active</span>
-            </div>
-            <div className="h-4 w-px bg-white/10" />
-            <button className="text-xs text-gray-400 hover:text-white transition-colors capitalize">
-              Draft 1.0 (Auto-Save)
-            </button>
+            {/* Interactive Autosave Indicators */}
+            {activeProject && (
+              <>
+                <div className="flex items-center gap-2 text-[10px] font-bold tracking-widest uppercase font-mono">
+                  {isDirty ? (
+                    <>
+                      <div className="w-1.5 h-1.5 rounded-full bg-yellow-500 shadow-[0_0_8px_rgba(234,179,8,0.5)] animate-pulse" />
+                      <span className="text-yellow-500/80">Saving...</span>
+                    </>
+                  ) : (
+                    <>
+                      <div className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]" />
+                      <span className="text-gray-400">Sync Active</span>
+                    </>
+                  )}
+                </div>
+                <div className="h-4 w-px bg-white/10" />
+                <span className="text-[10px] font-mono text-gray-500">
+                  {isDirty ? "Saving Draft..." : `Draft Saved ${lastSavedAt ? `at ${lastSavedAt}` : ""}`}
+                </span>
+              </>
+            )}
           </div>
         </header>
 
-        {/* Editor Scroll Container */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar bg-[#111] py-12">
-          <ScriptEditor
-            key={project.id}
-            initialContent={project.content}
-            onUpdate={(html) => setProject({ ...project, content: html })}
-          />
-        </div>
+        {/* Content Area Switch */}
+        {activeView === "editor" ? (
+          <div className="flex-1 overflow-y-auto custom-scrollbar bg-[#111] py-8">
+            {activeProject ? (
+              <ScriptEditor key={activeProject.id} />
+            ) : (
+              <div className="h-full flex flex-col items-center justify-center text-gray-500 font-mono text-xs">
+                Select or initialize a screenplay to start writing.
+              </div>
+            )}
+          </div>
+        ) : (
+          <CompliancePanel />
+        )}
       </main>
 
-      {/* Right Sidebar: Muse */}
+      {/* Right Sidebar: Muse Chat */}
       <Muse />
 
       {/* Wizard Modal */}

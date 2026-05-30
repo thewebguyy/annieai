@@ -1,10 +1,33 @@
-import { createClient } from '@supabase/supabase-js';
+// Architectural Layer: Data Layer
+// Dependencies: @supabase/ssr, next/headers
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
 
-// Create client only if keys are present to avoid build-time errors
-export const supabase = createClient(
-    supabaseUrl || 'https://placeholder.supabase.co',
-    supabaseAnonKey || 'placeholder'
-);
+export async function createSupabaseServer() {
+  const cookieStore = await cookies();
+  
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder';
+
+  return createServerClient(
+    supabaseUrl,
+    supabaseAnonKey,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll();
+        },
+        setAll(cookiesToSet) {
+          try {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options)
+            );
+          } catch {
+            // Can be ignored if handled via middleware session refresh
+          }
+        },
+      },
+    }
+  );
+}

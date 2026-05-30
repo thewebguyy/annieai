@@ -67,7 +67,7 @@ export const ScreenplayExtensions = [
                     return this.editor.commands.insertContent({ type: 'dialogue', content: [] });
                 },
                 'Tab': ({ editor }) => {
-                    return editor.commands.setNode('character');
+                    return editor.commands.setNode('parenthetical');
                 }
             };
         },

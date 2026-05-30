@@ -1,30 +1,24 @@
 'use client';
 
 import { useState } from 'react';
-import { supabase } from '@/lib/db/supabase';
-import { useRouter } from 'next/navigation';
+import { supabase } from '@/lib/db/supabaseClient';
+import { toast } from '@/lib/ui/toast';
 import { Command, Github, Sparkles } from 'lucide-react';
 
 export default function LoginPage() {
     const [email, setEmail] = useState('');
     const [loading, setLoading] = useState(false);
-    const router = useRouter();
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
-        // Simulate login for demo if no keys
-        if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
-            setTimeout(() => router.push('/'), 1000);
-            return;
-        }
 
         const { error } = await supabase.auth.signInWithOtp({ email });
         if (error) {
-            alert(error.message);
+            toast.error(error.message);
             setLoading(false);
         } else {
-            alert('Check your email for the magic link!');
+            toast.success('Check your email for the magic link!');
             setLoading(false);
         }
     };
@@ -46,7 +40,7 @@ export default function LoginPage() {
 
                 <div className="z-10 space-y-8">
                     <div className="bg-white/5 backdrop-blur border border-white/10 p-6 rounded-xl max-w-md">
-                        <p className="italic text-gray-300 mb-4">"The task-based routing is a game changer. Claude handles my dialogue, GPT checks my plot holes. It's like a writers' room in my pocket."</p>
+                        <p className="italic text-gray-300 mb-4">&ldquo;The task-based routing is a game changer. Claude handles my dialogue, GPT checks my plot holes. It&apos;s like a writers&apos; room in my pocket.&rdquo;</p>
                         <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-full bg-gray-500"></div>
                             <div>
